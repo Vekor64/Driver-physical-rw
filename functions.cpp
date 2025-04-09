@@ -1,7 +1,6 @@
 #include "functions.h"
 #include "comms.h"
 
-// 内存读写操作
 NTSTATUS ReadPhysicalMemory(HANDLE ProcessId, PVOID SourceAddress, PVOID TargetAddress, SIZE_T Size)
 {
     PEPROCESS SourceProcess;
@@ -9,7 +8,6 @@ NTSTATUS ReadPhysicalMemory(HANDLE ProcessId, PVOID SourceAddress, PVOID TargetA
     if (!NT_SUCCESS(Status))
         return Status;
 
-    // 获取源地址对应的物理地址
     KAPC_STATE ApcState;
     KeStackAttachProcess(SourceProcess, &ApcState);
     PHYSICAL_ADDRESS PhysicalAddr = MmGetPhysicalAddress(SourceAddress);
@@ -21,7 +19,6 @@ NTSTATUS ReadPhysicalMemory(HANDLE ProcessId, PVOID SourceAddress, PVOID TargetA
         return STATUS_INVALID_ADDRESS;
     }
 
-    // 映射物理地址到系统空间
     PVOID MappedMemory = MmMapIoSpace(PhysicalAddr, Size, MmNonCached);
     if (!MappedMemory)
     {
@@ -29,10 +26,8 @@ NTSTATUS ReadPhysicalMemory(HANDLE ProcessId, PVOID SourceAddress, PVOID TargetA
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
-    // 复制内存内容
     RtlCopyMemory(TargetAddress, MappedMemory, Size);
 
-    // 取消映射
     MmUnmapIoSpace(MappedMemory, Size);
 
     ObDereferenceObject(SourceProcess);
@@ -46,7 +41,6 @@ NTSTATUS WritePhysicalMemory(HANDLE ProcessId, PVOID TargetAddress, PVOID Source
     if (!NT_SUCCESS(Status))
         return Status;
 
-    // 获取目标地址对应的物理地址
     KAPC_STATE ApcState;
     KeStackAttachProcess(TargetProcess, &ApcState);
     PHYSICAL_ADDRESS PhysicalAddr = MmGetPhysicalAddress(TargetAddress);
@@ -58,7 +52,6 @@ NTSTATUS WritePhysicalMemory(HANDLE ProcessId, PVOID TargetAddress, PVOID Source
         return STATUS_INVALID_ADDRESS;
     }
 
-    // 映射物理地址到系统空间
     PVOID MappedMemory = MmMapIoSpace(PhysicalAddr, Size, MmNonCached);
     if (!MappedMemory)
     {
@@ -66,17 +59,14 @@ NTSTATUS WritePhysicalMemory(HANDLE ProcessId, PVOID TargetAddress, PVOID Source
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
-    // 复制内存内容
     RtlCopyMemory(MappedMemory, SourceAddress, Size);
 
-    // 取消映射
     MmUnmapIoSpace(MappedMemory, Size);
 
     ObDereferenceObject(TargetProcess);
     return STATUS_SUCCESS;
 }
 
-// 进程保护
 NTSTATUS ProtectProcess(HANDLE ProcessId)
 {
     PEPROCESS Process;
@@ -84,19 +74,14 @@ NTSTATUS ProtectProcess(HANDLE ProcessId)
     if (!NT_SUCCESS(Status))
         return Status;
 
-    // 获取进程对象头部
     PUCHAR ProcessObject = (PUCHAR)Process;
 
-    // 修改进程保护标志
-    // 偏移0x87A是Windows进程对象中的Protection字段
-    // 设置为1表示启用保护
     *(PUCHAR)(ProcessObject + 0x87A) = 1;
 
     ObDereferenceObject(Process);
     return STATUS_SUCCESS;
 }
 
-// 获取模块基址
 NTSTATUS GetModuleBase(HANDLE ProcessId, LPCSTR ModuleName, PVOID* BaseAddress)
 {
     if (!ModuleName || !BaseAddress) {
@@ -121,9 +106,7 @@ NTSTATUS GetModuleBase(HANDLE ProcessId, LPCSTR ModuleName, PVOID* BaseAddress)
                 __leave;
             }
             
-            // 检查是否请求的是主模块（EXE）
             if (_stricmp(ModuleName, "") == 0 || _stricmp(ModuleName, "exe") == 0) {
-                // 返回进程的主模块基址
                 *BaseAddress = Peb->ImageBaseAddress;
                 Status = *BaseAddress ? STATUS_SUCCESS : STATUS_NOT_FOUND;
                 __leave;
@@ -163,7 +146,6 @@ NTSTATUS GetModuleBase(HANDLE ProcessId, LPCSTR ModuleName, PVOID* BaseAddress)
                 if (NT_SUCCESS(Status)) {
                     ModuleNameBuffer[ConvertedLength] = '\0';
                     
-                    // 比较模块名称（不区分大小写）
                     if (_stricmp(ModuleNameBuffer, ModuleName) == 0) {
                         *BaseAddress = Module->DllBase;
                         Status = STATUS_SUCCESS;
@@ -171,11 +153,9 @@ NTSTATUS GetModuleBase(HANDLE ProcessId, LPCSTR ModuleName, PVOID* BaseAddress)
                     }
                 }
                 
-                // 移动到下一个条目
                 Entry = Entry->Flink;
             }
             
-            // 如果没有找到匹配的模块
             Status = STATUS_NOT_FOUND;
         }
         __finally {
@@ -190,7 +170,6 @@ NTSTATUS GetModuleBase(HANDLE ProcessId, LPCSTR ModuleName, PVOID* BaseAddress)
     return Status;
 }
 
-// 虚拟内存操作
 NTSTATUS AllocateVirtualMemory(
     HANDLE ProcessId,
     PVOID* BaseAddress,
@@ -308,7 +287,6 @@ NTSTATUS CopyVirtualMemory(
     return Status;
 }
 
-// 入口点调用
 NTSTATUS CallKernelFunction(HANDLE ProcessId, PVOID EntryPoint, PVOID Context)
 {
     PEPROCESS Process;
@@ -335,7 +313,6 @@ NTSTATUS CallKernelFunction(HANDLE ProcessId, PVOID EntryPoint, PVOID Context)
     return Status;
 }
 
-// 请求处理函数
 NTSTATUS HandleDriverRequest(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 {
     UNREFERENCED_PARAMETER(DeviceObject);
@@ -346,7 +323,6 @@ NTSTATUS HandleDriverRequest(PDEVICE_OBJECT DeviceObject, PIRP Irp)
     ULONG InputBufferLength = 0;
     ULONG OutputBufferLength = 0;
 
-    // 根据IRP的主功能代码处理不同类型的请求
     switch (Stack->MajorFunction)
     {
     case IRP_MJ_CREATE:
