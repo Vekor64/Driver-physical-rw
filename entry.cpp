@@ -3,7 +3,6 @@
 
 #define WINDOWS_IGNORE_PACKING_MISMATCH
 
-// 驱动入口点
 NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
 {
     UNREFERENCED_PARAMETER(RegistryPath);
@@ -32,7 +31,6 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
         return Status;
     }
 
-    // 设置IRP处理函数
     for (ULONG i = 0; i < IRP_MJ_MAXIMUM_FUNCTION; i++)
         DriverObject->MajorFunction[i] = HandleDriverRequest;
 
@@ -40,7 +38,6 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
     return STATUS_SUCCESS;
 }
 
-// 驱动卸载
 void DriverUnload(PDRIVER_OBJECT DriverObject)
 {
     UNICODE_STRING SymbolicLink = RTL_CONSTANT_STRING(L"\\??\\ApexDriver");
