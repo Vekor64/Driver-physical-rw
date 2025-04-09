@@ -3,6 +3,21 @@
 #include <ntifs.h>
 #include <ntddk.h>
 
+EXTERN_C PVOID MmMapIoSpace(
+    IN PHYSICAL_ADDRESS PhysicalAddress,
+    IN SIZE_T NumberOfBytes,
+    IN MEMORY_CACHING_TYPE CacheType
+);
+
+EXTERN_C VOID MmUnmapIoSpace(
+    IN PVOID BaseAddress,
+    IN SIZE_T NumberOfBytes
+);
+
+EXTERN_C PHYSICAL_ADDRESS MmGetPhysicalAddress(
+    IN PVOID BaseAddress
+);
+
 EXTERN_C NTSTATUS MmCopyVirtualMemory(
 	IN PEPROCESS FromProcess,
 	IN CONST VOID* FromAddress,
